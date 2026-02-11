@@ -1,0 +1,24 @@
+[
+    {
+        "type": "PremiumClient",
+        "client_id": 1,
+        "name": "Pedro",
+        "age": 23,
+        "contact": {
+            "email": "pedro@pepe.com",
+            "phone": 12345678
+        },
+        "address": "casa 123"
+    },
+    {
+        "type": "CorporateClient",
+        "client_id": 3,
+        "name": "Diego",
+        "age": 43,
+        "contact": {
+            "email": "diego@corp.com",
+            "phone": 43215678
+        },
+        "company": "diegoCorp"
+    }
+]
