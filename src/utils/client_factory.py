@@ -1,9 +1,9 @@
 """ CREA OBJETO CLIENTE A PARTIR DEL DICCIONARIO client_factory.py """
 
-from src.model.client import (
-    Client, RegularClient,
-    PremiumClient, CorporateClient
-)
+from src.model.client import Client
+from src.model.regular_client import RegularClient
+from src.model.premium_client import PremiumClient
+from src.model.corporate_client import CorporateClient
 from src.exceptions.client_exceptions import ClientTypeError
 from src.model.contact_info import ContactInfo
 

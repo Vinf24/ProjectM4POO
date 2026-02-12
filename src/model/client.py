@@ -1,9 +1,9 @@
 """ CLASE CLIENTE client.py """
 
 from src.model.contact_info import ContactInfo
-from src.utils.input_helpers import (
-    input_int, input_age, input_phone,
-    input_non_empty, input_email
+from src.exceptions.client_exceptions import (
+    InvalidEmailError, InvalidNameError,
+    InvalidPhoneError, InvalidAgeError, ClientError
 )
 
 class Client:
@@ -65,15 +65,15 @@ class Client:
     @name.setter
     def name(self, value: str) -> None:
         if not isinstance(value, str):
-            raise TypeError("Name must be a string")
+            raise InvalidNameError("Name must be a string")
 
         value = value.strip()
 
         if not value:
-            raise ValueError("Name cannot be empty")
+            raise InvalidNameError("Name cannot be empty")
 
-        if value.isdigit():
-            raise ValueError("Name cannot be only numbers")
+        if any(char.isdigit() for char in value):
+            raise InvalidNameError("Name can't have numbers")
 
         self._name = value
 
@@ -85,13 +85,13 @@ class Client:
     @age.setter
     def age(self, value: int) -> None:
         if not isinstance(value, int):
-            raise TypeError("Age must be an integer")
+            raise InvalidAgeError("Age must be an integer")
 
         if value < 0:
-            raise ValueError("Age cannot be negative")
+            raise InvalidAgeError("Age cannot be negative")
 
         if value > 122:
-            raise ValueError("Age must be realistic, or NEW RECORD")
+            raise InvalidAgeError("Age must be realistic, or NEW RECORD")
 
         self._age = value
 
@@ -106,22 +106,38 @@ class Client:
         }
 
     def _edit_name(self):
-        new_name = input_non_empty("Enter new name: ")
+        new_name = input("Enter new name: ")
         self.name = new_name
 
     def _edit_age(self):
-        new_age = input_age("Enter new age: ")
+        new_age = input("Enter new age: ")
         self.age = new_age
 
     def _edit_email(self):
+        value = input("Enter new email: ").strip()
+        if not value:
+            return
         if not self.contact:
             self.contact = ContactInfo()
-        self.contact.email = input_email("Enter new email: ")
+        try:
+            self.contact.email = value
+        except InvalidEmailError as e:
+            print(e)
 
     def _edit_phone(self):
+        value = input("Enter new phone: ").strip()
+        if not value:
+            return
+        if not value.isdigit():
+            print("Phone must contain only numbers")
+            return
         if not self.contact:
             self.contact = ContactInfo()
-        self.contact.phone = input_phone("Enter new phone: ")
+        try:
+            self.contact.phone = int(value)
+            print("Phone updated successfully")
+        except InvalidPhoneError as e:
+            print(e)
 
     def show_menu_edit(self) -> None:
         """ MUESTRA MENU DE OPCIONES EDITABLES """
@@ -133,153 +149,14 @@ class Client:
                 print(f"{i}. {label}")
             print("0. Exit")
 
-            option = input_int("Select an option: ")
-            if option == 0:
-                break
             try:
-                action = list(fields.values())[option - 1][1]
-                action()
+                option = int(input("Select an option: "))
+                if option == 0:
+                    break
+                try:
+                    action = list(fields.values())[option - 1][1]
+                    action()
+                except ClientError as e:
+                    print(e)
             except (IndexError, ValueError):
                 print("Invalid input. Please enter a valid option.")
-
-class RegularClient(Client):
-    """ CLIENTE REGULAR """
-    def __init__(self, name, age, email: str | None = None, client_id: int | None = None):
-        contact = ContactInfo(email=email) if email else None
-        super().__init__(name, age, contact, client_id)
-
-    @classmethod
-    def from_dict(cls, data: dict, contact: ContactInfo | None = None) -> "RegularClient":
-        email=contact.email if contact else None
-        obj = cls(
-            data["name"],
-            data["age"],
-            email=email
-        )
-        obj.client_id = data["client_id"]
-        return obj
-
-    def to_dict(self):
-        return {
-            "type": self.__class__.__name__,
-            "client_id": self.client_id,
-            "name": self._name,
-            "age": self.age,
-            "contact": self.contact.to_dict() if self.contact else None
-        }
-
-    def get_discount(self) -> float:
-        return 0.05
-
-    def __str__(self):
-        return (
-            f"[{self.__class__.__name__}] ID: {self.client_id}. {self._name} ({self.age})\n"
-            f"Contact: {self.contact.email}"
-    )
-
-    def editable_fields(self) -> dict:
-        fields = super().editable_fields()
-        fields["email"] = ("Email", self._edit_email)
-        return fields
-
-class PremiumClient(Client):
-    """ CLIENTE PREMIUM """
-    def __init__(self, name, age, email, phone, address, client_id: int | None = None):
-        contact = ContactInfo(email=email, phone=phone)
-        super().__init__(name, age, contact, client_id)
-        self.address = address
-
-    @classmethod
-    def from_dict(cls, data: dict, contact: ContactInfo | None = None) -> "PremiumClient":
-        obj = cls(
-            data["name"],
-            data["age"],
-            contact.email,
-            contact.phone,
-            data["address"]
-        )
-        obj.client_id = data["client_id"]
-        return obj
-
-    def to_dict(self):
-        return {
-            "type": self.__class__.__name__,
-            "client_id": self.client_id,
-            "name": self._name,
-            "age": self.age,
-            "contact": self.contact.to_dict() if self.contact else None,
-            "address": self.address
-        }
-
-    def get_discount(self) -> float:
-        return 0.15
-
-    def __str__(self):
-        return (
-    f"[{self.__class__.__name__}] ID: {self.client_id}. {self._name} ({self.age})\n"
-    f"Contact: {self.contact.email} - {self.contact.phone}\n"
-    f"Address: {self.address}"
-    )
-
-    def editable_fields(self) -> dict:
-        fields = super().editable_fields()
-        fields.update({
-            "email": ("Email", self._edit_email),
-            "phone": ("Phone", self._edit_phone),
-            "adress": ("Address", self._edit_address),
-        })
-        return fields
-
-    def _edit_address(self):
-        self.address = input_non_empty("Enter new address: ")
-
-class CorporateClient(Client):
-    """ CLIENTE CORPORATIVO """
-    def __init__(self, name, age, email, phone, company, client_id: int | None = None):
-        contact = ContactInfo(email=email, phone=phone)
-        super().__init__(name, age, contact, client_id)
-        self.company = company
-
-    @classmethod
-    def from_dict(cls, data: dict, contact: ContactInfo | None = None) -> "CorporateClient":
-        obj = cls(
-            data["name"],
-            data["age"],
-            contact.email,
-            contact.phone,
-            data["company"]
-        )
-        obj.client_id = data["client_id"]
-        return obj
-
-    def to_dict(self):
-        return {
-            "type": self.__class__.__name__,
-            "client_id": self.client_id,
-            "name": self._name,
-            "age": self.age,
-            "contact": self.contact.to_dict() if self.contact else None,
-            "company": self.company
-        }
-
-    def get_discount(self) -> float:
-        return 0.25
-
-    def __str__(self):
-        return (
-    f"[{self.__class__.__name__}] ID: {self.client_id}. {self._name} ({self.age})\n"
-    f"Contact: {self.contact.email} - {self.contact.phone}\n"
-    f"Company: {self.company}"
-    )
-
-    def editable_fields(self) -> dict:
-        fields = super().editable_fields()
-        fields.update({
-            "email": ("Email", self._edit_email),
-            "phone": ("Phone", self._edit_phone),
-            "company": ("Company", self._edit_company),
-        })
-        return fields
-
-    def _edit_company(self):
-        self.company = input_non_empty("Enter new company: ")

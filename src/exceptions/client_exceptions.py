@@ -11,3 +11,15 @@ class InvalidAgeError(ClientError):
 
 class InvalidEmailError(ClientError):
     """ ERROR EMAIL INVALIDO """
+
+class InvalidPhoneError(ClientError):
+    """ ERROR TELEFONO INVALIDO """
+
+class InvalidNameError(ClientError):
+    """ ERROR NOMBRE INVALIDO """
+
+class InvalidCompanyError(ClientError):
+    """ ERROR EMPRESA INVALIDA """
+
+class InvalidAddressError(ClientError):
+    """ ERROR DIRECCION INVALIDA """

@@ -1,11 +1,11 @@
 """ SERVICIOS DE CLIENTE client_service.py """
 
-from src.model.client import Client, RegularClient, PremiumClient, CorporateClient
+from src.model.client import Client
+from src.model.regular_client import RegularClient
+from src.model.premium_client import PremiumClient
+from src.model.corporate_client import CorporateClient
 from src.utils.file_manager import load_clients_from_file
-from src.utils.input_helpers import (
-    input_int, input_age, input_phone,
-    input_non_empty, input_email, input_tipo
-)
+from src.exceptions.client_exceptions import ClientTypeError
 
 PATH = "src/data/clients.json"
 
@@ -29,30 +29,50 @@ def find_client_by_id(client_id: int) -> Client | None:
             return client
     print("Client doesn't exist")
     return None
-def create_client():
-    """ NEW CLIENT """
+def create_client() -> Client | None:
+    """ CREA UN NUEVO CLIENTE """
     print("Client types: 1. Regular - 2. Premium - 3. Corporate")
-    tipo = input_tipo()
-    name = input_non_empty("Enter name: ")
-    age = input_age()
-    email = input_email()
+
+    while True:
+        tipo = input("Enter client type: ")
+        try:
+            tipo = int(tipo)
+            if tipo not in (1, 2, 3):
+                raise ClientTypeError("Invalid client type")
+            break
+        except ValueError:
+            print("Must be a number")
+        except ClientTypeError as e:
+            print(str(e))
+
+    name = input("Enter name: ")
+    age = int(input("Enter age: "))
+
     match tipo:
         case 1:
-            return RegularClient(name, age, email)
+            email = input("Enter email: ")
+            client = RegularClient(name, age, email)
+            return client
         case 2:
-            phone = input_phone()
-            address = input_non_empty("Enter address: ")
-            return PremiumClient(name, age, email, phone, address)
+            email = input("Enter email: ")
+            phone = int(input("Enter number phone: "))
+            address = input("Enter address: ")
+            client = PremiumClient(name, age, email, phone, address)
+            return client
         case 3:
-            phone = input_phone()
-            company = input_non_empty("Enter company: ")
-            return CorporateClient(name, age, email, phone, company)
+            email = input("Enter email: ")
+            phone = int(input("Enter phone: "))
+            company = input("Enter company: ")
+            client = CorporateClient(name, age, email, phone, company)
+            return client
         case _:
-            print("Invalid client type selected")
+            print("Invalid option")
+
+    return None
 
 def edit_client():
     """ EDITA ALGUN ATRIBUTO DEL CLIENTE """
-    client_id = input_int(msg="Enter an existing ID: ")
+    client_id = int(input("Enter an existing ID: "))
     client = find_client_by_id(client_id)
 
     if not client:
@@ -62,7 +82,7 @@ def edit_client():
 
 def delete_client():
     """ ELIMINA CLIENTE POR ID """
-    client_id = input_int("Enter client ID to delete: ")
+    client_id = int(input("Enter client ID to delete: "))
     client = find_client_by_id(client_id)
 
     if not client:
