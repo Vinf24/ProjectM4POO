@@ -35,7 +35,9 @@ class ContactInfo:
             self._phone = None
             return
 
-        if not isinstance(value, int):
+        value = str(value).strip()
+
+        if not value.isdigit():
             raise InvalidPhoneError("Phone must be numeric")
 
         if len(str(value)) < 8:

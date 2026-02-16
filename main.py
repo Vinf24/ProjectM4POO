@@ -1,21 +1,30 @@
 """ CONTROL PRINCIPAL main.py """
 
+import sys
+from src.repository.client_repository import ClientRepository
 from src.services.client_service import (
-    add_client, list_clients, find_client_by_id, create_client,
-    edit_client, delete_client
-    )
-from src.utils.file_manager import save_client_to_file
-from src.exceptions.client_exceptions import ClientError
+    create_client, edit_client,
+    list_client_purchases, add_purchase_to_client
+)
+from src.exceptions.client_exceptions import ClientError, DatabaseConnectionError
+
 
 def main():
     """ PRINCIPAL """
+    try:
+        repository = ClientRepository()
+    except DatabaseConnectionError as e:
+        print("Database could not be opened:", e)
+        sys.exit()
+
     while True:
         print("1. Add client")
         print("2. List clients")
         print("3. Find client by ID")
-        print("4. Save clients to File")
-        print("5. Edit client")
-        print("6. Delete client")
+        print("4. Edit client")
+        print("5. Delete client")
+        print("6. Add purchase to client")
+        print("7. List client purchases")
         print("0. Exit")
         option = input("Select an option: ")
         if not option.isdigit():
@@ -27,48 +36,71 @@ def main():
                 try:
                     client = create_client()
                     if client:
-                        add_client(client)
+                        repository.save(client)
                         print("client added successfully!")
                     else:
                         print("Client was not created")
                 except ClientError as e:
                     print(e)
             case "2":
-                clients = list_clients()
+                clients = repository.find_all()
                 if not clients:
                     print("No clients found.")
                 else:
                     for client in clients:
                         print(client.to_dict())
             case "3":
-                client_id = int(input("Enter client ID to find: "))
-                client = find_client_by_id(client_id)
+                try:
+                    client_id = int(input("Enter client ID to find: "))
+                except ValueError:
+                    print("ID must be a number")
+                    continue
+                client = repository.find_by_id(client_id)
                 if client:
                     print(client.to_dict())
             case "4":
-                clients = list_clients()
-                if not clients:
-                    print("No clients to save.")
+                try:
+                    client_id = int(input("Enter client ID to edit: "))
+                except ValueError:
+                    print("ID must be a number")
+                    continue
+
+                client = repository.find_by_id(client_id)
+
+                if not client:
+                    print("Client not found.")
                 else:
-                    path = "src/data/clients.json"
-                    save_client_to_file(clients, path)
-                    print(f"clients saved to {path}")
+                    changed = edit_client(client)
+                    if changed:
+                        updated = repository.update(client)
+                        if updated:
+                            print("Client updated successfully!")
+                        else:
+                            print("Update failed.")
+                    else:
+                        print("No changes made. Client was not updated.")
             case "5":
-                edit_client()
+                try:
+                    client_id = int(input("Enter client ID to delete: "))
+                except ValueError:
+                    print("ID must be a number")
+                    continue
+                deleted = repository.delete(client_id)
+
+                if deleted:
+                    print("Client deleted successfully!")
+                else:
+                    print("Client not found.")
             case "6":
-                delete_client()
+                add_purchase_to_client(repository)
+            case "7":
+                list_client_purchases(repository)
             case "0":
-                confirm = input("Save before exit? (y/n): ").strip().lower()
-
-                if confirm == "y":
-                    path = "src/data/clients.json"
-                    save_client_to_file(list_clients(), path)
-                    print("Clients saved successfully.")
-
                 print("Exiting program...")
                 break
             case _:
                 print("Invalid option. Please try again.")
+
 
 if __name__ == "__main__":
     main()

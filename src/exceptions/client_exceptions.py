@@ -23,3 +23,24 @@ class InvalidCompanyError(ClientError):
 
 class InvalidAddressError(ClientError):
     """ ERROR DIRECCION INVALIDA """
+
+class InvalidAmountError(ClientError):
+    """ ERROR MONTO INVALIDO """
+
+class RepositoryError(Exception):
+    """ ERROR BASE DE PERSISTENCIA """
+
+class DatabaseConnectionError(RepositoryError):
+    """ NO SE PUDO CONECTAR A LA BASE DE DATOS """
+
+class DatabaseSchemaError(RepositoryError):
+    """ ERROR CREANDO TABLAS O ESTRUCTURA """
+
+class DatabaseWriteError(RepositoryError):
+    """ ERROR AL GUARDAR DATOS """
+
+class DatabaseReadError(RepositoryError):
+    """ ERROR AL LEER DATOS """
+
+class DatabaseDeleteError(RepositoryError):
+    """ ERROR AL ELIMINAR DATOS """

@@ -1,37 +1,22 @@
 """ CLASE CLIENTE client.py """
 
 from src.model.contact_info import ContactInfo
+from src.model.purchase import Purchase
 from src.exceptions.client_exceptions import (
     InvalidEmailError, InvalidNameError,
     InvalidPhoneError, InvalidAgeError, ClientError
 )
 
+
 class Client:
     """ CLASE CLIENTE """
-    _next_id = 1
 
     def __init__(self, name, age, contact: ContactInfo | None = None, client_id: int | None = None):
-        if client_id is None:
-            self.client_id = self._generate_id()
-        else:
-            self.client_id = client_id
-
+        self.client_id = client_id
         self.name: str = name
         self.age: int = age
         self.contact = contact
-
-    @classmethod
-    def _generate_id(cls) -> int:
-        """ GENERA ID """
-        idx = cls._next_id
-        Client._next_id += 1
-        return idx
-
-    @classmethod
-    def sync_next_id(cls, clients: list["Client"]) -> None:
-        """ ASEGURA ID UNICO """
-        if clients:
-            cls._next_id = max(c.client_id for c in clients) + 1
+        self._purchases: list[Purchase] = []
 
     @classmethod
     def from_dict(cls, data: dict, contact: ContactInfo | None = None) -> "Client":
@@ -110,7 +95,7 @@ class Client:
         self.name = new_name
 
     def _edit_age(self):
-        new_age = input("Enter new age: ")
+        new_age = int(input("Enter new age: "))
         self.age = new_age
 
     def _edit_email(self):
@@ -160,3 +145,19 @@ class Client:
                     print(e)
             except (IndexError, ValueError):
                 print("Invalid input. Please enter a valid option.")
+
+    def add_purchase(self, purchase: Purchase) -> None:
+        """ AÑADE UNA COMPRA """
+        self._purchases.append(purchase)
+
+    @property
+    def purchases(self):
+        """ COMPRA DEL CLIENTE """
+        return tuple(self._purchases)
+
+    def get_total_spent(self) -> float:
+        """ ENTREGA EL TOTAL GASTADO """
+        return sum(
+            purchase.calculate_total_with_discount(self)
+            for purchase in self._purchases
+        )

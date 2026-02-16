@@ -4,31 +4,9 @@ from src.model.client import Client
 from src.model.regular_client import RegularClient
 from src.model.premium_client import PremiumClient
 from src.model.corporate_client import CorporateClient
-from src.utils.file_manager import load_clients_from_file
-from src.exceptions.client_exceptions import ClientTypeError
+from src.model.purchase import Purchase
+from src.exceptions.client_exceptions import ClientTypeError, InvalidAgeError, InvalidPhoneError
 
-PATH = "src/data/clients.json"
-
-clients: list[Client] = load_clients_from_file(PATH)
-Client.sync_next_id(clients)
-
-def add_client(client: Client):
-    """ AÑADE CLIENTE"""
-    clients.append(client)
-
-def list_clients() -> list[Client]:
-    """ LISTA CLIENTES"""
-    if not clients:
-        return []
-    return clients
-
-def find_client_by_id(client_id: int) -> Client | None:
-    """ BUSCA CLIENTE POR ID"""
-    for client in clients:
-        if client.client_id == client_id:
-            return client
-    print("Client doesn't exist")
-    return None
 def create_client() -> Client | None:
     """ CREA UN NUEVO CLIENTE """
     print("Client types: 1. Regular - 2. Premium - 3. Corporate")
@@ -46,7 +24,10 @@ def create_client() -> Client | None:
             print(str(e))
 
     name = input("Enter name: ")
-    age = int(input("Enter age: "))
+    try:
+        age = int(input("Enter age: "))
+    except ValueError as e:
+        raise InvalidAgeError("Age must be a valid number") from e
 
     match tipo:
         case 1:
@@ -55,13 +36,19 @@ def create_client() -> Client | None:
             return client
         case 2:
             email = input("Enter email: ")
-            phone = int(input("Enter number phone: "))
+            try:
+                phone = int(input("Enter number phone: "))
+            except ValueError as e:
+                raise InvalidPhoneError("Phone must be only numbers") from e
             address = input("Enter address: ")
             client = PremiumClient(name, age, email, phone, address)
             return client
         case 3:
             email = input("Enter email: ")
-            phone = int(input("Enter phone: "))
+            try:
+                phone = int(input("Enter phone: "))
+            except ValueError as e:
+                raise InvalidPhoneError("Phone must be only numbers") from e
             company = input("Enter company: ")
             client = CorporateClient(name, age, email, phone, company)
             return client
@@ -70,28 +57,70 @@ def create_client() -> Client | None:
 
     return None
 
-def edit_client():
-    """ EDITA ALGUN ATRIBUTO DEL CLIENTE """
-    client_id = int(input("Enter an existing ID: "))
-    client = find_client_by_id(client_id)
-
+def edit_client(client: Client):
+    """ EDITA UN CLIENTE RECIBIDO """
     if not client:
         return
+    original_data = client.to_dict()
     client.show_menu_edit()
-    print("Client updated correctly")
+    updated_data = client.to_dict()
+    return original_data != updated_data
 
-def delete_client():
-    """ ELIMINA CLIENTE POR ID """
-    client_id = int(input("Enter client ID to delete: "))
-    client = find_client_by_id(client_id)
+def add_purchase_to_client(repository):
+    """ AÑADE COMPRA """
+    try:
+        client_id = int(input("Enter client ID: "))
+        client = repository.find_by_id(client_id)
+
+        if not client:
+            print("Client not found.")
+            return
+
+        amount = float(input("Enter purchase amount: "))
+        description = input("Enter description (optional): ")
+
+        purchase = Purchase(amount, description)
+        client.add_purchase(purchase)
+        repository.add_purchase(client_id, purchase)
+
+        print("Purchase added successfully.")
+
+    except ValueError:
+        print("Invalid numeric input.")
+
+def list_client_purchases(repository):
+    """ ENTREGA LISTA DE COMPRAS """
+    client_id_input = input("Enter client ID: ")
+
+    if not client_id_input.isdigit():
+        print("Invalid ID.")
+        return
+
+    client_id = int(client_id_input)
+
+    client = repository.find_by_id(client_id)
 
     if not client:
+        print("Client not found.")
         return
 
-    confirm = input("Are you sure? (y/n): ").strip().lower()
-    if confirm != "y":
-        print("Deletion cancelled.")
+    purchases_data = repository.get_purchases_by_id(client_id)
+
+    if not purchases_data:
+        print("This client has no purchases.")
         return
 
-    clients.remove(client)
-    print(f"Client ID {client_id} deleted successfully.")
+    print(f"\nPurchases for {client.name}:")
+
+    total_spent = 0
+
+    for amount, description, date in purchases_data:
+        purchase = Purchase(amount, description)
+        purchase.date = date
+
+        total = purchase.calculate_total_with_discount(client)
+        total_spent += total
+
+        print(purchase)
+
+    print(f"\nTotal spent (with discounts): {total_spent:.2f}")
